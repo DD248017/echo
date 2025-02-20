@@ -7,11 +7,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -318,46 +316,4 @@ func TestLoggerTemplateWithTimeUnixMicro(t *testing.T) {
 	unixMicros, err := strconv.ParseInt(buf.String(), 10, 64)
 	assert.NoError(t, err)
 	assert.WithinDuration(t, time.Unix(unixMicros/1000000, 0), time.Now(), 3*time.Second)
-}
-
-func writeCoverageReport() {
-	file, err := os.Create("../coverage/coverage_LoggerWithConfig.txt")
-	if err != nil {
-		fmt.Println("Failed to create coverage report file:", err)
-		return
-	}
-	defer file.Close()
-
-	fmt.Println("\n--- Branch Coverage Report ---")
-	file.WriteString("--- Branch Coverage Report ---\n")
-
-	executedBranches := 0
-	for id, executed := range loggerWithConfigCoverage {
-		if executed {
-			executedBranches++
-		}
-		line := fmt.Sprintf("Branch %d executed: %v\n", id, executed)
-		fmt.Print(line)
-		file.WriteString(line)
-	}
-
-	percentage := (float64(executedBranches) / float64(loggerWithConfigCoverageTotal)) * 100
-
-	fmt.Println("Branch coverage:", percentage, "%")
-	file.WriteString(fmt.Sprintf("Branch coverage: %.2f%%\n", percentage))
-
-	fmt.Println("--- End of Report ---")
-	file.WriteString("--- End of Report ---\n")
-}
-
-func TestMain(m *testing.M) {
-	for i := 0; i < loggerWithConfigCoverageTotal; i++ {
-		loggerWithConfigCoverage[i] = false
-	}
-
-	exitCode := m.Run()
-
-	writeCoverageReport()
-
-	os.Exit(exitCode)
 }

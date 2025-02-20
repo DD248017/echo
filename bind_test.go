@@ -15,7 +15,6 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -1568,46 +1567,4 @@ func assertMultipartFileHeader(t *testing.T, fh *multipart.FileHeader, file test
 	assert.Equal(t, string(file.Content), string(body))
 	err = fl.Close()
 	assert.NoError(t, err)
-}
-
-func writeCoverageReport() {
-	file, err := os.Create("coverage/coverage_bindData.txt")
-	if err != nil {
-		fmt.Println("Failed to create coverage report file:", err)
-		return
-	}
-	defer file.Close()
-
-	fmt.Println("\n--- Branch Coverage Report ---")
-	file.WriteString("--- Branch Coverage Report ---\n")
-
-	executedBranches := 0
-	for id, executed := range bindDataCoverage {
-		if executed {
-			executedBranches++
-		}
-		line := fmt.Sprintf("Branch %d executed: %v\n", id, executed)
-		fmt.Print(line)
-		file.WriteString(line)
-	}
-
-	percentage := (float64(executedBranches) / float64(bindDataCoverageTotal)) * 100
-
-	fmt.Println("Branch coverage:", percentage, "%")
-	file.WriteString(fmt.Sprintf("Branch coverage: %.2f%%\n", percentage))
-
-	fmt.Println("--- End of Report ---")
-	file.WriteString("--- End of Report ---\n")
-}
-
-func TestMain(m *testing.M) {
-	for i := 0; i < bindDataCoverageTotal; i++ {
-		bindDataCoverage[i] = false
-	}
-
-	exitCode := m.Run()
-
-	writeCoverageReport()
-
-	os.Exit(exitCode)
 }
