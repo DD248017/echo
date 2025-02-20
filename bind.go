@@ -145,7 +145,7 @@ func (b *DefaultBinder) Bind(i interface{}, c Context) (err error) {
 
 var bindDataCoverage = make(map[int]bool)
 
-const bindDataCoverageTotal = 61
+const bindDataCoverageTotal = 102
 
 // bindData will bind data ONLY fields in destination struct that have EXPLICIT tag
 func (b *DefaultBinder) bindData(destination interface{}, data map[string][]string, tag string, dataFiles map[string][]*multipart.FileHeader) error {
@@ -380,41 +380,59 @@ func (b *DefaultBinder) bindData(destination interface{}, data map[string][]stri
 func setWithProperType(valueKind reflect.Kind, val string, structField reflect.Value) error {
 	// But also call it here, in case we're dealing with an array of BindUnmarshalers
 	if ok, err := unmarshalInputToField(valueKind, val, structField); ok {
+		bindDataCoverage[84] = true
 		return err
 	}
+	bindDataCoverage[85] = true
 
 	switch valueKind {
 	case reflect.Ptr:
+		bindDataCoverage[86] = true
 		return setWithProperType(structField.Elem().Kind(), val, structField.Elem())
 	case reflect.Int:
+		bindDataCoverage[87] = true
 		return setIntField(val, 0, structField)
 	case reflect.Int8:
+		bindDataCoverage[88] = true
 		return setIntField(val, 8, structField)
 	case reflect.Int16:
+		bindDataCoverage[89] = true
 		return setIntField(val, 16, structField)
 	case reflect.Int32:
+		bindDataCoverage[90] = true
 		return setIntField(val, 32, structField)
 	case reflect.Int64:
+		bindDataCoverage[91] = true
 		return setIntField(val, 64, structField)
 	case reflect.Uint:
+		bindDataCoverage[92] = true
 		return setUintField(val, 0, structField)
 	case reflect.Uint8:
+		bindDataCoverage[93] = true
 		return setUintField(val, 8, structField)
 	case reflect.Uint16:
+		bindDataCoverage[94] = true
 		return setUintField(val, 16, structField)
 	case reflect.Uint32:
+		bindDataCoverage[95] = true
 		return setUintField(val, 32, structField)
 	case reflect.Uint64:
+		bindDataCoverage[96] = true
 		return setUintField(val, 64, structField)
 	case reflect.Bool:
+		bindDataCoverage[97] = true
 		return setBoolField(val, structField)
 	case reflect.Float32:
+		bindDataCoverage[98] = true
 		return setFloatField(val, 32, structField)
 	case reflect.Float64:
+		bindDataCoverage[99] = true
 		return setFloatField(val, 64, structField)
 	case reflect.String:
+		bindDataCoverage[100] = true
 		structField.SetString(val)
 	default:
+		bindDataCoverage[101] = true
 		return errors.New("unknown type")
 	}
 	return nil
@@ -422,34 +440,52 @@ func setWithProperType(valueKind reflect.Kind, val string, structField reflect.V
 
 func unmarshalInputsToField(valueKind reflect.Kind, values []string, field reflect.Value) (bool, error) {
 	if valueKind == reflect.Ptr {
+		bindDataCoverage[71] = true
 		if field.IsNil() {
+			bindDataCoverage[72] = true
 			field.Set(reflect.New(field.Type().Elem()))
+		} else {
+			bindDataCoverage[73] = true
 		}
 		field = field.Elem()
+	} else {
+		bindDataCoverage[74] = true
 	}
 
 	fieldIValue := field.Addr().Interface()
 	unmarshaler, ok := fieldIValue.(bindMultipleUnmarshaler)
 	if !ok {
+		bindDataCoverage[75] = true
 		return false, nil
 	}
+	bindDataCoverage[76] = true
 	return true, unmarshaler.UnmarshalParams(values)
 }
 
 func unmarshalInputToField(valueKind reflect.Kind, val string, field reflect.Value) (bool, error) {
 	if valueKind == reflect.Ptr {
+		bindDataCoverage[77] = true
 		if field.IsNil() {
+			bindDataCoverage[78] = true
 			field.Set(reflect.New(field.Type().Elem()))
+		} else {
+			bindDataCoverage[79] = true
 		}
 		field = field.Elem()
+	} else {
+		bindDataCoverage[80] = true
 	}
 
 	fieldIValue := field.Addr().Interface()
 	switch unmarshaler := fieldIValue.(type) {
 	case BindUnmarshaler:
+		bindDataCoverage[81] = true
 		return true, unmarshaler.UnmarshalParam(val)
 	case encoding.TextUnmarshaler:
+		bindDataCoverage[82] = true
 		return true, unmarshaler.UnmarshalText([]byte(val))
+	default:
+		bindDataCoverage[83] = true
 	}
 
 	return false, nil
@@ -513,10 +549,13 @@ func isFieldMultipartFile(field reflect.Type) (bool, error) {
 	case multipartFileHeaderPointerType,
 		multipartFileHeaderSliceType,
 		multipartFileHeaderPointerSliceType:
+		bindDataCoverage[61] = true
 		return true, nil
 	case multipartFileHeaderType:
+		bindDataCoverage[62] = true
 		return true, errors.New("binding to multipart.FileHeader struct is not supported, use pointer to struct")
 	default:
+		bindDataCoverage[63] = true
 		return false, nil
 	}
 }
@@ -524,22 +563,30 @@ func isFieldMultipartFile(field reflect.Type) (bool, error) {
 func setMultipartFileHeaderTypes(structField reflect.Value, inputFieldName string, files map[string][]*multipart.FileHeader) bool {
 	fileHeaders := files[inputFieldName]
 	if len(fileHeaders) == 0 {
+		bindDataCoverage[64] = true
 		return false
+	} else {
+		bindDataCoverage[65] = true
 	}
 
 	result := true
 	switch structField.Type() {
 	case multipartFileHeaderPointerSliceType:
+		bindDataCoverage[66] = true
 		structField.Set(reflect.ValueOf(fileHeaders))
 	case multipartFileHeaderSliceType:
+		bindDataCoverage[67] = true
 		headers := make([]multipart.FileHeader, len(fileHeaders))
 		for i, fileHeader := range fileHeaders {
+			bindDataCoverage[68] = true
 			headers[i] = *fileHeader
 		}
 		structField.Set(reflect.ValueOf(headers))
 	case multipartFileHeaderPointerType:
+		bindDataCoverage[69] = true
 		structField.Set(reflect.ValueOf(fileHeaders[0]))
 	default:
+		bindDataCoverage[70] = true
 		result = false
 	}
 
