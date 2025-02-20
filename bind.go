@@ -143,11 +143,17 @@ func (b *DefaultBinder) Bind(i interface{}, c Context) (err error) {
 	return b.BindBody(c, i)
 }
 
+var bindDataCoverage = make(map[int]bool)
+
+const bindDataCoverageTotal = 61
+
 // bindData will bind data ONLY fields in destination struct that have EXPLICIT tag
 func (b *DefaultBinder) bindData(destination interface{}, data map[string][]string, tag string, dataFiles map[string][]*multipart.FileHeader) error {
 	if destination == nil || (len(data) == 0 && len(dataFiles) == 0) {
+		bindDataCoverage[0] = true
 		return nil
 	}
+	bindDataCoverage[1] = true
 	hasFiles := len(dataFiles) > 0
 	typ := reflect.TypeOf(destination).Elem()
 	val := reflect.ValueOf(destination).Elem()
@@ -159,77 +165,121 @@ func (b *DefaultBinder) bindData(destination interface{}, data map[string][]stri
 	// You are better off binding to struct but there are user who want this map feature. Source of data for these cases are:
 	// params,query,header,form as these sources produce string values, most of the time slice of strings, actually.
 	if typ.Kind() == reflect.Map && typ.Key().Kind() == reflect.String {
+		bindDataCoverage[2] = true
 		k := typ.Elem().Kind()
 		isElemInterface := k == reflect.Interface
 		isElemString := k == reflect.String
 		isElemSliceOfStrings := k == reflect.Slice && typ.Elem().Elem().Kind() == reflect.String
 		if !(isElemSliceOfStrings || isElemString || isElemInterface) {
+			bindDataCoverage[3] = true
 			return nil
 		}
+		bindDataCoverage[4] = true
 		if val.IsNil() {
+			bindDataCoverage[5] = true
 			val.Set(reflect.MakeMap(typ))
+		} else {
+			bindDataCoverage[6] = true
 		}
 		for k, v := range data {
+			bindDataCoverage[7] = true
 			if isElemString {
+				bindDataCoverage[8] = true
 				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v[0]))
 			} else if isElemInterface {
 				// To maintain backward compatibility, we always bind to the first string value
 				// and not the slice of strings when dealing with map[string]interface{}{}
+				bindDataCoverage[9] = true
 				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v[0]))
 			} else {
+				bindDataCoverage[10] = true
 				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
 			}
 		}
+		bindDataCoverage[11] = true
 		return nil
 	}
+	bindDataCoverage[12] = true
 
 	// !struct
 	if typ.Kind() != reflect.Struct {
+		bindDataCoverage[13] = true
 		if tag == "param" || tag == "query" || tag == "header" {
 			// incompatible type, data is probably to be found in the body
+			bindDataCoverage[14] = true
 			return nil
 		}
+		bindDataCoverage[15] = true
 		return errors.New("binding element must be a struct")
 	}
+	bindDataCoverage[16] = true
 
 	for i := 0; i < typ.NumField(); i++ { // iterate over all destination fields
+		bindDataCoverage[17] = true
 		typeField := typ.Field(i)
 		structField := val.Field(i)
 		if typeField.Anonymous {
+			bindDataCoverage[18] = true
 			if structField.Kind() == reflect.Ptr {
+				bindDataCoverage[19] = true
 				structField = structField.Elem()
+			} else {
+				bindDataCoverage[20] = true
 			}
+		} else {
+			bindDataCoverage[21] = true
 		}
 		if !structField.CanSet() {
+			bindDataCoverage[22] = true
 			continue
+		} else {
+			bindDataCoverage[23] = true
 		}
 		structFieldKind := structField.Kind()
 		inputFieldName := typeField.Tag.Get(tag)
 		if typeField.Anonymous && structFieldKind == reflect.Struct && inputFieldName != "" {
 			// if anonymous struct with query/param/form tags, report an error
+			bindDataCoverage[24] = true
 			return errors.New("query/param/form tags are not allowed with anonymous struct field")
 		}
+		bindDataCoverage[25] = true
 
 		if inputFieldName == "" {
 			// If tag is nil, we inspect if the field is a not BindUnmarshaler struct and try to bind data into it (might contain fields with tags).
 			// structs that implement BindUnmarshaler are bound only when they have explicit tag
+			bindDataCoverage[26] = true
 			if _, ok := structField.Addr().Interface().(BindUnmarshaler); !ok && structFieldKind == reflect.Struct {
+				bindDataCoverage[27] = true
 				if err := b.bindData(structField.Addr().Interface(), data, tag, dataFiles); err != nil {
 					return err
 				}
+			} else {
+				bindDataCoverage[28] = true
 			}
 			// does not have explicit tag and is not an ordinary struct - so move to next field
 			continue
+		} else {
+			bindDataCoverage[29] = true
 		}
 
 		if hasFiles {
+			bindDataCoverage[30] = true
 			if ok, err := isFieldMultipartFile(structField.Type()); err != nil {
+				bindDataCoverage[31] = true
 				return err
 			} else if ok {
+				bindDataCoverage[32] = true
 				if ok := setMultipartFileHeaderTypes(structField, inputFieldName, dataFiles); ok {
+					bindDataCoverage[33] = true
 					continue
+				} else {
+					bindDataCoverage[34] = true
 				}
+			} else {
+				bindDataCoverage[35] = true
 			}
+		} else {
+			bindDataCoverage[36] = true
 		}
 
 		inputValue, exists := data[inputFieldName]
@@ -238,17 +288,27 @@ func (b *DefaultBinder) bindData(destination interface{}, data map[string][]stri
 			// url params are bound case-sensitive which is inconsistent.  To
 			// fix this we must check all of the map values in a
 			// case-insensitive search.
+			bindDataCoverage[37] = true
 			for k, v := range data {
+				bindDataCoverage[38] = true
 				if strings.EqualFold(k, inputFieldName) {
+					bindDataCoverage[39] = true
 					inputValue = v
 					exists = true
 					break
+				} else {
+					bindDataCoverage[40] = true
 				}
 			}
+		} else {
+			bindDataCoverage[41] = true
 		}
 
 		if !exists {
+			bindDataCoverage[42] = true
 			continue
+		} else {
+			bindDataCoverage[43] = true
 		}
 
 		// NOTE: algorithm here is not particularly sophisticated. It probably does not work with absurd types like `**[]*int`
@@ -256,42 +316,63 @@ func (b *DefaultBinder) bindData(destination interface{}, data map[string][]stri
 
 		// try unmarshalling first, in case we're dealing with an alias to an array type
 		if ok, err := unmarshalInputsToField(typeField.Type.Kind(), inputValue, structField); ok {
+			bindDataCoverage[44] = true
 			if err != nil {
+				bindDataCoverage[45] = true
 				return err
 			}
+			bindDataCoverage[46] = true
 			continue
+		} else {
+			bindDataCoverage[47] = true
 		}
 
 		if ok, err := unmarshalInputToField(typeField.Type.Kind(), inputValue[0], structField); ok {
+			bindDataCoverage[48] = true
 			if err != nil {
+				bindDataCoverage[49] = true
 				return err
 			}
+			bindDataCoverage[50] = true
 			continue
+		} else {
+			bindDataCoverage[51] = true
 		}
 
 		// we could be dealing with pointer to slice `*[]string` so dereference it. There are weird OpenAPI generators
 		// that could create struct fields like that.
 		if structFieldKind == reflect.Pointer {
+			bindDataCoverage[52] = true
 			structFieldKind = structField.Elem().Kind()
 			structField = structField.Elem()
+		} else {
+			bindDataCoverage[53] = true
 		}
 
 		if structFieldKind == reflect.Slice {
+			bindDataCoverage[54] = true
 			sliceOf := structField.Type().Elem().Kind()
 			numElems := len(inputValue)
 			slice := reflect.MakeSlice(structField.Type(), numElems, numElems)
 			for j := 0; j < numElems; j++ {
+				bindDataCoverage[55] = true
 				if err := setWithProperType(sliceOf, inputValue[j], slice.Index(j)); err != nil {
+					bindDataCoverage[56] = true
 					return err
 				}
+				bindDataCoverage[57] = true
 			}
 			structField.Set(slice)
 			continue
+		} else {
+			bindDataCoverage[58] = true
 		}
 
 		if err := setWithProperType(structFieldKind, inputValue[0], structField); err != nil {
+			bindDataCoverage[59] = true
 			return err
 		}
+		bindDataCoverage[60] = true
 	}
 	return nil
 }
