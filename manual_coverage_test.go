@@ -45,11 +45,15 @@ func initCoverage(coverage map[int]bool, total int) {
 func TestMain(m *testing.M) {
 	initCoverage(bindDataCoverage, bindDataCoverageTotal)
 	initCoverage(insertNodeCoverage, insertNodeCoverageTotal)
+	initCoverage(findCoverage, findCoverageTotal)
+	initCoverage(addMethodCoverage, addMethodCoverageTotal)
 
 	exitCode := m.Run()
 
 	writeCoverageReport(bindDataCoverage, bindDataCoverageTotal, "bindData")
 	writeCoverageReport(insertNodeCoverage, insertNodeCoverageTotal, "insertNode")
+	writeCoverageReport(findCoverage, findCoverageTotal, "find")
+	writeCoverageReport(addMethodCoverage, addMethodCoverageTotal, "addMethod")
 
 	os.Exit(exitCode)
 }

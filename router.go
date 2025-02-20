@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"sync"
 )
 
 // Router is the registry of all registered routes for an `Echo` instance for
@@ -91,44 +92,75 @@ func (m *routeMethods) updateAllowHeader() {
 	buf.WriteString(http.MethodOptions)
 
 	if m.connect != nil {
+		setAddMethodCoverage(17)
 		buf.WriteString(", ")
 		buf.WriteString(http.MethodConnect)
+	} else {
+		setAddMethodCoverage(18)
 	}
 	if m.delete != nil {
+		setAddMethodCoverage(19)
 		buf.WriteString(", ")
 		buf.WriteString(http.MethodDelete)
+	} else {
+		setAddMethodCoverage(20)
 	}
 	if m.get != nil {
+		setAddMethodCoverage(21)
 		buf.WriteString(", ")
 		buf.WriteString(http.MethodGet)
+	} else {
+		setAddMethodCoverage(22)
 	}
 	if m.head != nil {
+		setAddMethodCoverage(23)
 		buf.WriteString(", ")
 		buf.WriteString(http.MethodHead)
+	} else {
+		setAddMethodCoverage(24)
 	}
 	if m.patch != nil {
+		setAddMethodCoverage(25)
 		buf.WriteString(", ")
 		buf.WriteString(http.MethodPatch)
+	} else {
+		setAddMethodCoverage(26)
 	}
 	if m.post != nil {
+		setAddMethodCoverage(27)
 		buf.WriteString(", ")
 		buf.WriteString(http.MethodPost)
+	} else {
+		setAddMethodCoverage(28)
 	}
 	if m.propfind != nil {
+		setAddMethodCoverage(29)
 		buf.WriteString(", PROPFIND")
+	} else {
+		setAddMethodCoverage(30)
 	}
 	if m.put != nil {
+		setAddMethodCoverage(31)
 		buf.WriteString(", ")
 		buf.WriteString(http.MethodPut)
+	} else {
+		setAddMethodCoverage(32)
 	}
 	if m.trace != nil {
+		setAddMethodCoverage(33)
 		buf.WriteString(", ")
 		buf.WriteString(http.MethodTrace)
+	} else {
+		setAddMethodCoverage(34)
 	}
 	if m.report != nil {
+		setAddMethodCoverage(35)
 		buf.WriteString(", REPORT")
+	} else {
+		setAddMethodCoverage(36)
 	}
 	for method := range m.anyOther { // for simplicity, we use map and therefore order is not deterministic here
+		setAddMethodCoverage(37)
 		buf.WriteString(", ")
 		buf.WriteString(method)
 	}
@@ -500,57 +532,85 @@ func (n *node) findChildWithLabel(l byte) *node {
 	return nil
 }
 
+var addMethodCoverage = make(map[int]bool)
+var addMethodCoverageMu sync.Mutex
+
+const addMethodCoverageTotal = 38
+
+func setAddMethodCoverage(index int) {
+	addMethodCoverageMu.Lock()
+	addMethodCoverage[index] = true
+	addMethodCoverageMu.Unlock()
+}
+
 func (n *node) addMethod(method string, h *routeMethod) {
 	switch method {
 	case http.MethodConnect:
+		setAddMethodCoverage(0)
 		insertNodeCoverage[18] = true
 		n.methods.connect = h
 	case http.MethodDelete:
+		setAddMethodCoverage(1)
 		insertNodeCoverage[19] = true
 		n.methods.delete = h
 	case http.MethodGet:
+		setAddMethodCoverage(2)
 		insertNodeCoverage[20] = true
 		n.methods.get = h
 	case http.MethodHead:
+		setAddMethodCoverage(3)
 		insertNodeCoverage[21] = true
 		n.methods.head = h
 	case http.MethodOptions:
+		setAddMethodCoverage(4)
 		insertNodeCoverage[22] = true
 		n.methods.options = h
 	case http.MethodPatch:
+		setAddMethodCoverage(5)
 		insertNodeCoverage[23] = true
 		n.methods.patch = h
 	case http.MethodPost:
+		setAddMethodCoverage(6)
 		insertNodeCoverage[24] = true
 		n.methods.post = h
 	case PROPFIND:
+		setAddMethodCoverage(7)
 		insertNodeCoverage[25] = true
 		n.methods.propfind = h
 	case http.MethodPut:
+		setAddMethodCoverage(8)
 		insertNodeCoverage[26] = true
 		n.methods.put = h
 	case http.MethodTrace:
+		setAddMethodCoverage(9)
 		insertNodeCoverage[27] = true
 		n.methods.trace = h
 	case REPORT:
+		setAddMethodCoverage(10)
 		insertNodeCoverage[28] = true
 		n.methods.report = h
 	case RouteNotFound:
+		setAddMethodCoverage(11)
 		insertNodeCoverage[29] = true
 		n.notFoundHandler = h
 		return // RouteNotFound/404 is not considered as a handler so no further logic needs to be executed
 	default:
+		setAddMethodCoverage(12)
 		insertNodeCoverage[30] = true
 		if n.methods.anyOther == nil {
+			setAddMethodCoverage(13)
 			insertNodeCoverage[31] = true
 			n.methods.anyOther = make(map[string]*routeMethod)
 		} else {
+			setAddMethodCoverage(14)
 			insertNodeCoverage[32] = true
 		}
 		if h.handler == nil {
+			setAddMethodCoverage(15)
 			insertNodeCoverage[33] = true
 			delete(n.methods.anyOther, method)
 		} else {
+			setAddMethodCoverage(16)
 			insertNodeCoverage[34] = true
 			n.methods.anyOther[method] = h
 		}
@@ -599,6 +659,17 @@ func optionsMethodHandler(allowMethods string) func(c Context) error {
 	}
 }
 
+var findCoverage = make(map[int]bool)
+var findCoverageMu sync.Mutex
+
+const findCoverageTotal = 54
+
+func setFindCoverage(index int) {
+	findCoverageMu.Lock()
+	findCoverage[index] = true
+	findCoverageMu.Unlock()
+}
+
 // Find lookup a handler registered for method and path. It also parses URL for path
 // parameters and load them into context.
 //
@@ -634,20 +705,26 @@ func (r *Router) Find(method, path string, c Context) {
 
 		// Next node type by priority
 		if previous.kind == anyKind {
+			setFindCoverage(0)
 			nextNodeKind = staticKind
 		} else {
+			setFindCoverage(1)
 			nextNodeKind = previous.kind + 1
 		}
 
 		if fromKind == staticKind {
+			setFindCoverage(2)
 			// when backtracking is done from static kind block we did not change search so nothing to restore
 			return
 		}
+		setFindCoverage(3)
 
 		// restore search to value it was before we move to current node we are backtracking from.
 		if previous.kind == staticKind {
+			setFindCoverage(4)
 			searchIndex -= len(previous.prefix)
 		} else {
+			setFindCoverage(5)
 			paramIndex--
 			// for param/any node.prefix value is always `:` so we can not deduce searchIndex from that and must use pValue
 			// for that index as it would also contain part of path we cut off before moving into node we are backtracking from
@@ -670,32 +747,45 @@ func (r *Router) Find(method, path string, c Context) {
 		lcpLen := 0    // LCP (longest common prefix) length
 
 		if currentNode.kind == staticKind {
+			setFindCoverage(6)
 			searchLen := len(search)
 			prefixLen = len(currentNode.prefix)
 
 			// LCP - Longest Common Prefix (https://en.wikipedia.org/wiki/LCP_array)
 			max := prefixLen
 			if searchLen < max {
+				setFindCoverage(7)
 				max = searchLen
+			} else {
+				setFindCoverage(8)
 			}
 			for ; lcpLen < max && search[lcpLen] == currentNode.prefix[lcpLen]; lcpLen++ {
+				setFindCoverage(9)
 			}
+		} else {
+			setFindCoverage(10)
 		}
 
 		if lcpLen != prefixLen {
+			setFindCoverage(11)
 			// No matching prefix, let's backtrack to the first possible alternative node of the decision path
 			nk, ok := backtrackToNextNodeKind(staticKind)
 			if !ok {
+				setFindCoverage(12)
 				return // No other possibilities on the decision path, handler will be whatever context is reset to.
 			} else if nk == paramKind {
+				setFindCoverage(13)
 				goto Param
 				// NOTE: this case (backtracking from static node to previous any node) can not happen by current any matching logic. Any node is end of search currently
 				//} else if nk == anyKind {
 				//	goto Any
 			} else {
+				setFindCoverage(14)
 				// Not found (this should never be possible for static node we are looking currently)
 				break
 			}
+		} else {
+			setFindCoverage(15)
 		}
 
 		// The full prefix has matched, remove the prefix from the remaining search
@@ -704,43 +794,66 @@ func (r *Router) Find(method, path string, c Context) {
 
 		// Finish routing if is no request path remaining to search
 		if search == "" {
+			setFindCoverage(16)
 			// in case of node that is handler we have exact method type match or something for 405 to use
 			if currentNode.isHandler {
+				setFindCoverage(17)
 				// check if current node has handler registered for http method we are looking for. we store currentNode as
 				// best matching in case we do no find no more routes matching this path+method
 				if previousBestMatchNode == nil {
+					setFindCoverage(18)
 					previousBestMatchNode = currentNode
+				} else {
+					setFindCoverage(19)
 				}
 				if h := currentNode.findMethod(method); h != nil {
+					setFindCoverage(20)
 					matchedRouteMethod = h
 					break
+				} else {
+					setFindCoverage(21)
 				}
 			} else if currentNode.notFoundHandler != nil {
+				setFindCoverage(22)
 				matchedRouteMethod = currentNode.notFoundHandler
 				break
+			} else {
+				setFindCoverage(23)
 			}
+		} else {
+			setFindCoverage(24)
 		}
 
 		// Static node
 		if search != "" {
+			setFindCoverage(25)
 			if child := currentNode.findStaticChild(search[0]); child != nil {
+				setFindCoverage(26)
 				currentNode = child
 				continue
+			} else {
+				setFindCoverage(27)
 			}
+		} else {
+			setFindCoverage(28)
 		}
 
 	Param:
 		// Param node
 		if child := currentNode.paramChild; search != "" && child != nil {
+			setFindCoverage(29)
 			currentNode = child
 			i := 0
 			l := len(search)
 			if currentNode.isLeaf {
+				setFindCoverage(30)
 				// when param node does not have any children (path param is last piece of route path) then param node should
 				// act similarly to any node - consider all remaining search as match
 				i = l
 			} else {
+				setFindCoverage(31)
 				for ; i < l && search[i] != '/'; i++ {
+					setFindCoverage(32)
 				}
 			}
 
@@ -749,11 +862,14 @@ func (r *Router) Find(method, path string, c Context) {
 			search = search[i:]
 			searchIndex = searchIndex + i
 			continue
+		} else {
+			setFindCoverage(33)
 		}
 
 	Any:
 		// Any node
 		if child := currentNode.anyChild; child != nil {
+			setFindCoverage(34)
 			// If any node is found, use remaining path for paramValues
 			currentNode = child
 			paramValues[currentNode.paramsCount-1] = search
@@ -764,46 +880,65 @@ func (r *Router) Find(method, path string, c Context) {
 			search = ""
 
 			if h := currentNode.findMethod(method); h != nil {
+				setFindCoverage(35)
 				matchedRouteMethod = h
 				break
+			} else {
+				setFindCoverage(36)
 			}
 			// we store currentNode as best matching in case we do not find more routes matching this path+method. Needed for 405
 			if previousBestMatchNode == nil {
+				setFindCoverage(37)
 				previousBestMatchNode = currentNode
+			} else {
+				setFindCoverage(38)
 			}
 			if currentNode.notFoundHandler != nil {
+				setFindCoverage(39)
 				matchedRouteMethod = currentNode.notFoundHandler
 				break
+			} else {
+				setFindCoverage(40)
 			}
+		} else {
+			setFindCoverage(41)
 		}
 
 		// Let's backtrack to the first possible alternative node of the decision path
 		nk, ok := backtrackToNextNodeKind(anyKind)
 		if !ok {
+			setFindCoverage(42)
 			break // No other possibilities on the decision path
 		} else if nk == paramKind {
+			setFindCoverage(43)
 			goto Param
 		} else if nk == anyKind {
+			setFindCoverage(44)
 			goto Any
 		} else {
+			setFindCoverage(45)
 			// Not found
 			break
 		}
 	}
 
 	if currentNode == nil && previousBestMatchNode == nil {
+		setFindCoverage(46)
 		return // nothing matched at all
 	}
+	setFindCoverage(47)
 
 	// matchedHandler could be method+path handler that we matched or notFoundHandler from node with matching path
 	// user provided not found (404) handler has priority over generic method not found (405) handler or global 404 handler
 	var rPath string
 	var rPNames []string
 	if matchedRouteMethod != nil {
+		setFindCoverage(48)
 		rPath = matchedRouteMethod.ppath
 		rPNames = matchedRouteMethod.pnames
 		ctx.handler = matchedRouteMethod.handler
 	} else {
+		setFindCoverage(49)
 		// use previous match as basis. although we have no matching handler we have path match.
 		// so we can send http.StatusMethodNotAllowed (405) instead of http.StatusNotFound (404)
 		currentNode = previousBestMatchNode
@@ -812,15 +947,20 @@ func (r *Router) Find(method, path string, c Context) {
 		rPNames = nil // no params here
 		ctx.handler = NotFoundHandler
 		if currentNode.notFoundHandler != nil {
+			setFindCoverage(50)
 			rPath = currentNode.notFoundHandler.ppath
 			rPNames = currentNode.notFoundHandler.pnames
 			ctx.handler = currentNode.notFoundHandler.handler
 		} else if currentNode.isHandler {
+			setFindCoverage(51)
 			ctx.Set(ContextKeyHeaderAllow, currentNode.methods.allowHeader)
 			ctx.handler = MethodNotAllowedHandler
 			if method == http.MethodOptions {
+				setFindCoverage(52)
 				ctx.handler = optionsMethodHandler(currentNode.methods.allowHeader)
 			}
+		} else {
+			setFindCoverage(53)
 		}
 	}
 	ctx.path = rPath
