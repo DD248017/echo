@@ -255,16 +255,26 @@ func (r *Router) insert(method, path string, h HandlerFunc) {
 	r.insertNode(method, path, staticKind, routeMethod{ppath: ppath, pnames: pnames, handler: h})
 }
 
+var insertNodeCoverage = make(map[int]bool)
+
+const insertNodeCoverageTotal = 51
+
 func (r *Router) insertNode(method, path string, t kind, rm routeMethod) {
 	// Adjust max param
 	paramLen := len(rm.pnames)
 	if *r.echo.maxParam < paramLen {
+		insertNodeCoverage[0] = true
 		*r.echo.maxParam = paramLen
+	} else {
+		insertNodeCoverage[1] = true
 	}
 
 	currentNode := r.tree // Current node as root
 	if currentNode == nil {
+		insertNodeCoverage[2] = true
 		panic("echo: invalid method")
+	} else {
+		insertNodeCoverage[3] = true
 	}
 	search := path
 
@@ -276,23 +286,32 @@ func (r *Router) insertNode(method, path string, t kind, rm routeMethod) {
 		// LCP - Longest Common Prefix (https://en.wikipedia.org/wiki/LCP_array)
 		max := prefixLen
 		if searchLen < max {
+			insertNodeCoverage[4] = true
 			max = searchLen
+		} else {
+			insertNodeCoverage[5] = true
 		}
 		for ; lcpLen < max && search[lcpLen] == currentNode.prefix[lcpLen]; lcpLen++ {
+			insertNodeCoverage[6] = true
 		}
 
 		if lcpLen == 0 {
+			insertNodeCoverage[7] = true
 			// At root node
 			currentNode.label = search[0]
 			currentNode.prefix = search
 			if rm.handler != nil {
+				insertNodeCoverage[8] = true
 				currentNode.kind = t
 				currentNode.addMethod(method, &rm)
 				currentNode.paramsCount = len(rm.pnames)
 				currentNode.originalPath = rm.ppath
+			} else {
+				insertNodeCoverage[9] = true
 			}
 			currentNode.isLeaf = currentNode.staticChildren == nil && currentNode.paramChild == nil && currentNode.anyChild == nil
 		} else if lcpLen < prefixLen {
+			insertNodeCoverage[10] = true
 			// Split node into two before we insert new node.
 			// This happens when we are inserting path that is submatch of any existing inserted paths.
 			// For example, we have node `/test` and now are about to insert `/te/*`. In that case
@@ -313,13 +332,20 @@ func (r *Router) insertNode(method, path string, t kind, rm routeMethod) {
 			)
 			// Update parent path for all children to new node
 			for _, child := range currentNode.staticChildren {
+				insertNodeCoverage[11] = true
 				child.parent = n
 			}
 			if currentNode.paramChild != nil {
+				insertNodeCoverage[12] = true
 				currentNode.paramChild.parent = n
+			} else {
+				insertNodeCoverage[13] = true
 			}
 			if currentNode.anyChild != nil {
+				insertNodeCoverage[14] = true
 				currentNode.anyChild.parent = n
+			} else {
+				insertNodeCoverage[15] = true
 			}
 
 			// Reset parent node
@@ -340,55 +366,79 @@ func (r *Router) insertNode(method, path string, t kind, rm routeMethod) {
 			currentNode.addStaticChild(n)
 
 			if lcpLen == searchLen {
+				insertNodeCoverage[16] = true
 				// At parent node
 				currentNode.kind = t
 				if rm.handler != nil {
+					insertNodeCoverage[17] = true
 					currentNode.addMethod(method, &rm)
 					currentNode.paramsCount = len(rm.pnames)
 					currentNode.originalPath = rm.ppath
+				} else {
+					insertNodeCoverage[35] = true
 				}
 			} else {
+				insertNodeCoverage[36] = true
 				// Create child node
 				n = newNode(t, search[lcpLen:], currentNode, nil, "", new(routeMethods), 0, nil, nil, nil)
 				if rm.handler != nil {
+					insertNodeCoverage[37] = true
 					n.addMethod(method, &rm)
 					n.paramsCount = len(rm.pnames)
 					n.originalPath = rm.ppath
+				} else {
+					insertNodeCoverage[38] = true
 				}
 				// Only Static children could reach here
 				currentNode.addStaticChild(n)
 			}
 			currentNode.isLeaf = currentNode.staticChildren == nil && currentNode.paramChild == nil && currentNode.anyChild == nil
 		} else if lcpLen < searchLen {
+			insertNodeCoverage[39] = true
 			search = search[lcpLen:]
 			c := currentNode.findChildWithLabel(search[0])
 			if c != nil {
+				insertNodeCoverage[40] = true
 				// Go deeper
 				currentNode = c
 				continue
+			} else {
+				insertNodeCoverage[41] = true
 			}
 			// Create child node
 			n := newNode(t, search, currentNode, nil, rm.ppath, new(routeMethods), 0, nil, nil, nil)
 			if rm.handler != nil {
+				insertNodeCoverage[42] = true
 				n.addMethod(method, &rm)
 				n.paramsCount = len(rm.pnames)
+			} else {
+				insertNodeCoverage[43] = true
 			}
 
 			switch t {
 			case staticKind:
 				currentNode.addStaticChild(n)
+				insertNodeCoverage[44] = true
 			case paramKind:
 				currentNode.paramChild = n
+				insertNodeCoverage[45] = true
 			case anyKind:
 				currentNode.anyChild = n
+				insertNodeCoverage[46] = true
+			default:
+				insertNodeCoverage[47] = true
 			}
 			currentNode.isLeaf = currentNode.staticChildren == nil && currentNode.paramChild == nil && currentNode.anyChild == nil
 		} else {
+			insertNodeCoverage[48] = true
 			// Node already exists
 			if rm.handler != nil {
+				insertNodeCoverage[49] = true
 				currentNode.addMethod(method, &rm)
 				currentNode.paramsCount = len(rm.pnames)
 				currentNode.originalPath = rm.ppath
+			} else {
+				insertNodeCoverage[50] = true
 			}
 		}
 		return
@@ -453,37 +503,55 @@ func (n *node) findChildWithLabel(l byte) *node {
 func (n *node) addMethod(method string, h *routeMethod) {
 	switch method {
 	case http.MethodConnect:
+		insertNodeCoverage[18] = true
 		n.methods.connect = h
 	case http.MethodDelete:
+		insertNodeCoverage[19] = true
 		n.methods.delete = h
 	case http.MethodGet:
+		insertNodeCoverage[20] = true
 		n.methods.get = h
 	case http.MethodHead:
+		insertNodeCoverage[21] = true
 		n.methods.head = h
 	case http.MethodOptions:
+		insertNodeCoverage[22] = true
 		n.methods.options = h
 	case http.MethodPatch:
+		insertNodeCoverage[23] = true
 		n.methods.patch = h
 	case http.MethodPost:
+		insertNodeCoverage[24] = true
 		n.methods.post = h
 	case PROPFIND:
+		insertNodeCoverage[25] = true
 		n.methods.propfind = h
 	case http.MethodPut:
+		insertNodeCoverage[26] = true
 		n.methods.put = h
 	case http.MethodTrace:
+		insertNodeCoverage[27] = true
 		n.methods.trace = h
 	case REPORT:
+		insertNodeCoverage[28] = true
 		n.methods.report = h
 	case RouteNotFound:
+		insertNodeCoverage[29] = true
 		n.notFoundHandler = h
 		return // RouteNotFound/404 is not considered as a handler so no further logic needs to be executed
 	default:
+		insertNodeCoverage[30] = true
 		if n.methods.anyOther == nil {
+			insertNodeCoverage[31] = true
 			n.methods.anyOther = make(map[string]*routeMethod)
+		} else {
+			insertNodeCoverage[32] = true
 		}
 		if h.handler == nil {
+			insertNodeCoverage[33] = true
 			delete(n.methods.anyOther, method)
 		} else {
+			insertNodeCoverage[34] = true
 			n.methods.anyOther[method] = h
 		}
 	}

@@ -4,8 +4,10 @@
 package echo
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -2888,4 +2890,46 @@ func BenchmarkRouterGooglePlusAPIMisses(b *testing.B) {
 
 func BenchmarkRouterParamsAndAnyAPI(b *testing.B) {
 	benchmarkRouterRoutes(b, paramAndAnyAPI, paramAndAnyAPIToFind)
+}
+
+func writeCoverageReport() {
+	file, err := os.Create("coverage/coverage_insertNode.txt")
+	if err != nil {
+		fmt.Println("Failed to create coverage report file:", err)
+		return
+	}
+	defer file.Close()
+
+	fmt.Println("\n--- Branch Coverage Report ---")
+	file.WriteString("--- Branch Coverage Report ---\n")
+
+	executedBranches := 0
+	for id, executed := range insertNodeCoverage {
+		if executed {
+			executedBranches++
+		}
+		line := fmt.Sprintf("Branch %d executed: %v\n", id, executed)
+		fmt.Print(line)
+		file.WriteString(line)
+	}
+
+	percentage := (float64(insertNodeCoverage) / float64(insertNodeCoverageTotal)) * 100
+
+	fmt.Println("Branch coverage:", percentage, "%")
+	file.WriteString(fmt.Sprintf("Branch coverage: %.2f%%\n", percentage))
+
+	fmt.Println("--- End of Report ---")
+	file.WriteString("--- End of Report ---\n")
+}
+
+func TestMain(m *testing.M) {
+	for i := 0; i < insertNodeCoverageTotal; i++ {
+		insertNodeCoverage[i] = false
+	}
+
+	exitCode := m.Run()
+
+	writeCoverageReport()
+
+	os.Exit(exitCode)
 }
