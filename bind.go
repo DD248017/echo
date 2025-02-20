@@ -159,28 +159,7 @@ func (b *DefaultBinder) bindData(destination interface{}, data map[string][]stri
 	// You are better off binding to struct but there are user who want this map feature. Source of data for these cases are:
 	// params,query,header,form as these sources produce string values, most of the time slice of strings, actually.
 	if typ.Kind() == reflect.Map && typ.Key().Kind() == reflect.String {
-		k := typ.Elem().Kind()
-		isElemInterface := k == reflect.Interface
-		isElemString := k == reflect.String
-		isElemSliceOfStrings := k == reflect.Slice && typ.Elem().Elem().Kind() == reflect.String
-		if !(isElemSliceOfStrings || isElemString || isElemInterface) {
-			return nil
-		}
-		if val.IsNil() {
-			val.Set(reflect.MakeMap(typ))
-		}
-		for k, v := range data {
-			if isElemString {
-				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v[0]))
-			} else if isElemInterface {
-				// To maintain backward compatibility, we always bind to the first string value
-				// and not the slice of strings when dealing with map[string]interface{}{}
-				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v[0]))
-			} else {
-				val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
-			}
-		}
-		return nil
+		return handleMapBinding(typ, val, data)
 	}
 
 	// !struct
@@ -192,6 +171,35 @@ func (b *DefaultBinder) bindData(destination interface{}, data map[string][]stri
 		return errors.New("binding element must be a struct")
 	}
 
+	return handleStructBinding(b, typ, val, data, hasFiles, dataFiles, tag)
+}
+
+func handleMapBinding(typ reflect.Type, val reflect.Value, data map[string][]string) error {
+	k := typ.Elem().Kind()
+	isElemInterface := k == reflect.Interface
+	isElemString := k == reflect.String
+	isElemSliceOfStrings := k == reflect.Slice && typ.Elem().Elem().Kind() == reflect.String
+	if !(isElemSliceOfStrings || isElemString || isElemInterface) {
+		return nil
+	}
+	if val.IsNil() {
+		val.Set(reflect.MakeMap(typ))
+	}
+	for k, v := range data {
+		if isElemString {
+			val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v[0]))
+		} else if isElemInterface {
+			// To maintain backward compatibility, we always bind to the first string value
+			// and not the slice of strings when dealing with map[string]interface{}{}
+			val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v[0]))
+		} else {
+			val.SetMapIndex(reflect.ValueOf(k), reflect.ValueOf(v))
+		}
+	}
+	return nil
+}
+
+func handleStructBinding(b *DefaultBinder, typ reflect.Type, val reflect.Value, data map[string][]string, hasFiles bool, dataFiles map[string][]*multipart.FileHeader, tag string) error {
 	for i := 0; i < typ.NumField(); i++ { // iterate over all destination fields
 		typeField := typ.Field(i)
 		structField := val.Field(i)
