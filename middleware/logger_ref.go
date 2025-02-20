@@ -93,6 +93,7 @@ func Logger() echo.MiddlewareFunc {
 // LoggerWithConfig returns a Logger middleware with config.
 // See: `Logger()`.
 func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
+	//Defaults
 	if config.Skipper == nil{
 		config.Skipper = DefaultLoggerConfig.Skipper
 	}
