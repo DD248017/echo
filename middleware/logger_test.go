@@ -317,3 +317,183 @@ func TestLoggerTemplateWithTimeUnixMicro(t *testing.T) {
 	assert.NoError(t, err)
 	assert.WithinDuration(t, time.Unix(unixMicros/1000000, 0), time.Now(), 3*time.Second)
 }
+
+/*
+func TestLoggerCustomTagFuncError(t *testing.T) {
+	// Create a new Echo instance
+	e := echo.New()
+
+	// Define a custom tag function for testing
+	customTagFunc := func(c echo.Context, buf *bytes.Buffer) (int, error) {
+		return buf.WriteString(`"custom":"custom tag error"`)
+	}
+
+	// Configure the Logger middleware with the custom tag function
+	loggerConfig := LoggerConfig{
+		Format:        `{"time":"${time_rfc3339_nano}","id":"${id}","remote_ip":"${remote_ip}",` +
+			`"host":"${host}","method":"${method}","uri":"${uri}","user_agent":"${user_agent}",` +
+			`"status":${status},"error":"${error}","latency":${latency},"latency_human":"${latency_human}"` +
+			`,"bytes_in":${bytes_in},"bytes_out":${bytes_out},"custom":${custom}}`,
+		CustomTagFunc: customTagFunc,
+	}
+
+	// Apply the logger middleware with the custom config
+	e.Use(LoggerWithConfig(loggerConfig))
+
+	// Create a request and a response recorder to capture the output
+	req := httptest.NewRequest(echo.GET, "/", nil)
+	rec := httptest.NewRecorder()
+
+	// Create a context for the request
+	c := e.NewContext(req, rec)
+
+	// Call the handler function (for testing, no actual handler)
+	handler := func(c echo.Context) error {
+		return c.String(200, "OK")
+	}
+
+	// Wrap the handler with the middleware
+	if err := LoggerWithConfig(loggerConfig)(handler)(c); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now, we will check if the log output contains the expected values
+
+	// Capture the output from the response recorder
+	logOutput := rec.Body.String()
+
+	// Assert that the custom tag "custom tag error" is present in the output
+	assert.Contains(t, logOutput, `"custom":"custom tag error"`)
+
+	// Optionally, assert other key fields to make sure the log structure is correct
+	assert.Contains(t, logOutput, `"method":"GET"`)
+	assert.Contains(t, logOutput, `"status":200`)
+	assert.Contains(t, logOutput, `"uri":"/"`)
+	assert.Contains(t, logOutput, `"latency_human"`)
+}
+
+
+
+/*
+
+func TestLoggerWithConfig_CustomTagError(t *testing.T) {
+	// Crea un contesto Echo per simulare una richiesta HTTP
+	e := echo.New()
+
+	// Crea una richiesta di esempio
+	req := httptest.NewRequest(echo.GET, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	// Configurazione del logger con un CustomTagFunc che genera un errore
+	config := middleware.LoggerConfig{
+		Format: `{"custom":"${custom}"}`,
+		CustomTagFunc: func(c echo.Context, buf *bytes.Buffer) (int, error) {
+			return 0, errors.New("custom tag error") // Simula un errore nel tag personalizzato
+		},
+		Output: rec,
+	}
+
+	// Crea il middleware con la configurazione personalizzata
+	logger := middleware.LoggerWithConfig(config)
+
+	// Usa il middleware con una funzione next che non fa nulla
+	err := logger(func(c echo.Context) error {
+		return nil
+	})(c)
+
+	// Assicurati che l'errore nel middleware venga catturato
+	assert.Error(t, err)  // Ora verifichiamo che l'errore non sia nil, per far fallire il test se presente
+
+	// Verifica che la risposta contenga il tag "custom" ma con un valore vuoto o errore
+	assert.Contains(t, rec.Body.String(), `"custom":""`) // Questo dovrebbe fallire perché non ci sarà un valore vuoto
+
+	// Se preferisci testare l'errore nel body, puoi anche verificare se l'errore è stato scritto da qualche parte
+	// Ad esempio, puoi aggiungere una verifica sulla presenza dell'errore nel corpo della risposta
+}
+
+
+
+/*
+// Funzione di test per LoggerWithConfig
+func TestLoggerWithConfig_CustomTagError(t *testing.T) {
+	// Crea un contesto Echo per simulare una richiesta HTTP
+	e := echo.New()
+
+	// Crea una richiesta di esempio
+	req := httptest.NewRequest(echo.GET, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	// Configurazione del logger con un CustomTagFunc che genera un errore
+	config := middleware.LoggerConfig{
+		Format:          `{"custom":"${custom}"}`,
+		CustomTagFunc: func(c echo.Context, buf *bytes.Buffer) (int, error) {
+			return 0, errors.New("custom tag error") // Simula un errore nel tag personalizzato
+		},
+		Output: rec,
+	}
+
+	// Crea il middleware con la configurazione personalizzata
+	logger := middleware.LoggerWithConfig(config)
+
+	// Usa il middleware con una funzione next che non fa nulla
+	err := logger(func(c echo.Context) error {
+		return nil
+	})(c)
+
+	// Verifica che non ci siano errori e che la risposta contenga il tag custom vuoto o un valore di errore
+	assert.NoError(t, err)
+	assert.Contains(t, rec.Body.String(), `"custom":""`) // Assicurati che il tag custom sia vuoto o assente
+
+	// Se preferisci testare specificamente il caso di errore, puoi controllare anche se l'errore è stato scritto da qualche parte
+	// Ad esempio, potresti verificare se il logger ha registrato l'errore nel body della risposta
+}
+*/
+
+func TestLoggerCustomTagFunc2(t *testing.T) {
+	e := echo.New()
+	buf := new(bytes.Buffer)
+	e.Use(LoggerWithConfig(LoggerConfig{
+		Format: `{"protocol":"${protocol}",${custom}}` + "\n",
+		CustomTagFunc: func(c echo.Context, buf *bytes.Buffer) (int, error) {
+			return buf.WriteString(`"tag":"my-value"`)
+		},
+		Output: buf,
+	}))
+
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "custom time stamp test")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, `{"protocol":"HTTP/1.1","tag":"my-value"}`+"\n", buf.String())
+}
+
+func TestLoggerWithCustomHeader(t *testing.T) {
+	e := echo.New()
+	buf := new(bytes.Buffer)
+	config := LoggerConfig{
+		Format: `{"custom_header":"${header:X-Custom-Header}"}\n`,
+		Output: buf,
+	}
+	middleware := LoggerWithConfig(config)
+	h := middleware(func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Custom-Header", "test-value")
+	res := httptest.NewRecorder()
+	c := e.NewContext(req, res)
+
+	// Act
+	_ = h(c)
+
+	// Assert
+	logOutput := buf.String()
+	assert.Contains(t, logOutput, `"custom_header":"test-value"`)
+}
