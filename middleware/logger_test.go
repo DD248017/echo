@@ -317,3 +317,29 @@ func TestLoggerTemplateWithTimeUnixMicro(t *testing.T) {
 	assert.NoError(t, err)
 	assert.WithinDuration(t, time.Unix(unixMicros/1000000, 0), time.Now(), 3*time.Second)
 }
+
+func TestLoggerWithSkipper(t *testing.T) {
+	e := echo.New()
+	buf := new(bytes.Buffer)
+	e.Use(LoggerWithConfig(LoggerConfig{
+		Skipper: func(c echo.Context) bool {
+			return true // Skipping logging
+		},
+		Output: buf,
+	}))
+
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	// Ensure the log buffer is empty since the Skipper skipped logging
+	assert.Empty(t, buf.String())
+}
+
+
+
+
