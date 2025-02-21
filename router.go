@@ -541,54 +541,17 @@ func optionsMethodHandler(allowMethods string) func(c Context) error {
 // - Return it `Echo#ReleaseContext()`.
 func (r *Router) Find(method, path string, c Context) {
 	ctx := c.(*context)
-	currentNode := r.tree // Current node as root
-
-	var (
-		previousBestMatchNode *node
-		matchedRouteMethod    *routeMethod
-		// search stores the remaining path to check for match. By each iteration we move from start of path to end of the path
-		// and search value gets shorter and shorter.
-		search      = path
-		searchIndex = 0
-		paramIndex  int           // Param counter
-		paramValues = ctx.pvalues // Use the internal slice so the interface can keep the illusion of a dynamic slice
-	)
+	currentNode := r.tree
+	var previousBestMatchNode *node
+	var matchedRouteMethod *routeMethod
+	search, searchIndex, paramIndex, paramValues := path, 0, 0, ctx.pvalues
 
 	// Backtracking is needed when a dead end (leaf node) is reached in the router tree.
 	// To backtrack the current node will be changed to the parent node and the next kind for the
 	// router logic will be returned based on fromKind or kind of the dead end node (static > param > any).
 	// For example if there is no static node match we should check parent next sibling by kind (param).
 	// Backtracking itself does not check if there is a next sibling, this is done by the router logic.
-	backtrackToNextNodeKind := func(fromKind kind) (nextNodeKind kind, valid bool) {
-		previous := currentNode
-		currentNode = previous.parent
-		valid = currentNode != nil
-
-		// Next node type by priority
-		if previous.kind == anyKind {
-			nextNodeKind = staticKind
-		} else {
-			nextNodeKind = previous.kind + 1
-		}
-
-		if fromKind == staticKind {
-			// when backtracking is done from static kind block we did not change search so nothing to restore
-			return
-		}
-
-		// restore search to value it was before we move to current node we are backtracking from.
-		if previous.kind == staticKind {
-			searchIndex -= len(previous.prefix)
-		} else {
-			paramIndex--
-			// for param/any node.prefix value is always `:` so we can not deduce searchIndex from that and must use pValue
-			// for that index as it would also contain part of path we cut off before moving into node we are backtracking from
-			searchIndex -= len(paramValues[paramIndex])
-			paramValues[paramIndex] = ""
-		}
-		search = path[searchIndex:]
-		return
-	}
+	backtrackFunc := r.createBacktrackFunc(path, &currentNode, &search, &searchIndex, &paramIndex, paramValues)
 
 	// Router tree is implemented by longest common prefix array (LCP array) https://en.wikipedia.org/wiki/LCP_array
 	// Tree search is implemented as for loop where one loop iteration is divided into 3 separate blocks
@@ -616,7 +579,7 @@ func (r *Router) Find(method, path string, c Context) {
 
 		if lcpLen != prefixLen {
 			// No matching prefix, let's backtrack to the first possible alternative node of the decision path
-			nk, ok := backtrackToNextNodeKind(staticKind)
+			nk, ok := backtrackFunc(staticKind)
 			if !ok {
 				return // No other possibilities on the decision path, handler will be whatever context is reset to.
 			} else if nk == paramKind {
@@ -710,7 +673,7 @@ func (r *Router) Find(method, path string, c Context) {
 		}
 
 		// Let's backtrack to the first possible alternative node of the decision path
-		nk, ok := backtrackToNextNodeKind(anyKind)
+		nk, ok := backtrackFunc(anyKind)
 		if !ok {
 			break // No other possibilities on the decision path
 		} else if nk == paramKind {
@@ -729,20 +692,53 @@ func (r *Router) Find(method, path string, c Context) {
 
 	// matchedHandler could be method+path handler that we matched or notFoundHandler from node with matching path
 	// user provided not found (404) handler has priority over generic method not found (405) handler or global 404 handler
+	r.finalizeRoute(method, ctx, currentNode, previousBestMatchNode, matchedRouteMethod)
+}
+
+func (r *Router) createBacktrackFunc(path string, currentNode **node, search *string, searchIndex *int, paramIndex *int, paramValues []string) func(kind) (kind, bool) {
+	return func(fromKind kind) (kind, bool) {
+		previous := *currentNode
+		*currentNode = previous.parent
+		if *currentNode == nil {
+			return 0, false
+		}
+
+		nextKind := previous.kind + 1
+		if previous.kind == anyKind {
+			nextKind = staticKind
+		}
+
+		if fromKind == staticKind {
+			return nextKind, true
+		}
+
+		// Restore search state
+		if previous.kind == staticKind {
+			*searchIndex -= len(previous.prefix)
+		} else {
+			*paramIndex--
+			*searchIndex -= len(paramValues[*paramIndex])
+			paramValues[*paramIndex] = ""
+		}
+		*search = path[*searchIndex:]
+		return nextKind, true
+	}
+}
+
+func (r *Router) finalizeRoute(method string, ctx *context, currentNode *node, previousBestMatchNode *node, matchedRouteMethod *routeMethod) {
 	var rPath string
 	var rPNames []string
-	if matchedRouteMethod != nil {
+
+	switch {
+	case matchedRouteMethod != nil:
 		rPath = matchedRouteMethod.ppath
 		rPNames = matchedRouteMethod.pnames
 		ctx.handler = matchedRouteMethod.handler
-	} else {
-		// use previous match as basis. although we have no matching handler we have path match.
-		// so we can send http.StatusMethodNotAllowed (405) instead of http.StatusNotFound (404)
+	case previousBestMatchNode != nil:
 		currentNode = previousBestMatchNode
-
 		rPath = currentNode.originalPath
-		rPNames = nil // no params here
 		ctx.handler = NotFoundHandler
+
 		if currentNode.notFoundHandler != nil {
 			rPath = currentNode.notFoundHandler.ppath
 			rPNames = currentNode.notFoundHandler.pnames
@@ -755,6 +751,7 @@ func (r *Router) Find(method, path string, c Context) {
 			}
 		}
 	}
+
 	ctx.path = rPath
 	ctx.pnames = rPNames
 }

@@ -131,56 +131,48 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 			defer config.pool.Put(buf)
 
 			if _, err = config.template.ExecuteFunc(buf, func(w io.Writer, tag string) (int, error) {
+				stringMessages := map[string]string{
+					"time_unix":         strconv.FormatInt(time.Now().Unix(), 10),
+					"time_unix_milli":   strconv.FormatInt(time.Now().UnixNano()/1000000, 10),
+					"time_unix_micro":   strconv.FormatInt(time.Now().UnixNano()/1000, 10),
+					"time_unix_nano":    strconv.FormatInt(time.Now().UnixNano(), 10),
+					"time_rfc3339":      time.Now().Format(time.RFC3339),
+					"time_rfc3339_nano": time.Now().Format(time.RFC3339Nano),
+					"time_custom":       time.Now().Format(config.CustomTimeFormat),
+					"remote_ip":         c.RealIP(),
+					"host":              req.Host,
+					"uri":               req.RequestURI,
+					"method":            req.Method,
+					"route":             c.Path(),
+					"protocol":          req.Proto,
+					"referer":           req.Referer(),
+					"user_agent":        req.UserAgent(),
+					"latency":           strconv.FormatInt(int64(stop.Sub(start)), 10),
+					"latency_human":     stop.Sub(start).String(),
+					"bytes_out":         strconv.FormatInt(res.Size, 10),
+				}
+				if msg, exists := stringMessages[tag]; exists {
+					return buf.WriteString(msg)
+				}
+
 				switch tag {
 				case "custom":
 					if config.CustomTagFunc == nil {
 						return 0, nil
 					}
 					return config.CustomTagFunc(c, buf)
-				case "time_unix":
-					return buf.WriteString(strconv.FormatInt(time.Now().Unix(), 10))
-				case "time_unix_milli":
-					// go 1.17 or later, it supports time#UnixMilli()
-					return buf.WriteString(strconv.FormatInt(time.Now().UnixNano()/1000000, 10))
-				case "time_unix_micro":
-					// go 1.17 or later, it supports time#UnixMicro()
-					return buf.WriteString(strconv.FormatInt(time.Now().UnixNano()/1000, 10))
-				case "time_unix_nano":
-					return buf.WriteString(strconv.FormatInt(time.Now().UnixNano(), 10))
-				case "time_rfc3339":
-					return buf.WriteString(time.Now().Format(time.RFC3339))
-				case "time_rfc3339_nano":
-					return buf.WriteString(time.Now().Format(time.RFC3339Nano))
-				case "time_custom":
-					return buf.WriteString(time.Now().Format(config.CustomTimeFormat))
 				case "id":
 					id := req.Header.Get(echo.HeaderXRequestID)
 					if id == "" {
 						id = res.Header().Get(echo.HeaderXRequestID)
 					}
 					return buf.WriteString(id)
-				case "remote_ip":
-					return buf.WriteString(c.RealIP())
-				case "host":
-					return buf.WriteString(req.Host)
-				case "uri":
-					return buf.WriteString(req.RequestURI)
-				case "method":
-					return buf.WriteString(req.Method)
 				case "path":
 					p := req.URL.Path
 					if p == "" {
 						p = "/"
 					}
 					return buf.WriteString(p)
-				case "route":
-					return buf.WriteString(c.Path())
-				case "protocol":
-					return buf.WriteString(req.Proto)
-				case "referer":
-					return buf.WriteString(req.Referer())
-				case "user_agent":
-					return buf.WriteString(req.UserAgent())
 				case "status":
 					n := res.Status
 					s := config.colorer.Green(n)
@@ -200,19 +192,12 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 						b = b[1 : len(b)-1]
 						return buf.Write(b)
 					}
-				case "latency":
-					l := stop.Sub(start)
-					return buf.WriteString(strconv.FormatInt(int64(l), 10))
-				case "latency_human":
-					return buf.WriteString(stop.Sub(start).String())
 				case "bytes_in":
 					cl := req.Header.Get(echo.HeaderContentLength)
 					if cl == "" {
 						cl = "0"
 					}
 					return buf.WriteString(cl)
-				case "bytes_out":
-					return buf.WriteString(strconv.FormatInt(res.Size, 10))
 				default:
 					switch {
 					case strings.HasPrefix(tag, "header:"):
