@@ -387,7 +387,7 @@ func (m *mockPusher) Push(target string, opts *http.PushOptions) error {
 //    it checks that the Push method is called without error.
 // 2. When the underlying ResponseWriter does not implement the http.Pusher interface,
 //    it checks that the Push method returns the http.ErrNotSupported error.
-func TestGzipResponseWriter_Push(t *testing.T) {
+func TestGzipResponseWriter_Push_WithPusher(t *testing.T) {
 	target := "/test"
 	opts := &http.PushOptions{}
 
@@ -402,11 +402,16 @@ func TestGzipResponseWriter_Push(t *testing.T) {
 	if !mock.pushCalled {
 		t.Error("expected Push to be called on the ResponseWriter")
 	}
+}
+
+func TestGzipResponseWriter_Push_WithoutPusher(t *testing.T) {
+	target := "/test"
+	opts := &http.PushOptions{}
 
 	// Case 2: ResponseWriter does not implement http.Pusher
 	nonPusher := httptest.NewRecorder() // Does not implement Pusher
-	w = &gzipResponseWriter{ResponseWriter: nonPusher}
-	err = w.Push(target, opts)
+	w := &gzipResponseWriter{ResponseWriter: nonPusher}
+	err := w.Push(target, opts)
 
 	if err != http.ErrNotSupported {
 		t.Errorf("expected error %v, got %v", http.ErrNotSupported, err)
