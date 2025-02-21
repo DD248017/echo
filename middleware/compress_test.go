@@ -365,3 +365,50 @@ func BenchmarkGzip(b *testing.B) {
 		h(c)
 	}
 }
+
+type mockPusher struct {
+	http.ResponseWriter
+	pushCalled bool
+	target     string
+	opts       *http.PushOptions
+	err        error
+}
+
+func (m *mockPusher) Push(target string, opts *http.PushOptions) error {
+	m.pushCalled = true
+	m.target = target
+	m.opts = opts
+	return m.err
+}
+
+// TestGzipResponseWriter_Push tests the Push method of the gzipResponseWriter type.
+// It verifies two cases:
+// 1. When the underlying ResponseWriter implements the http.Pusher interface,
+//    it checks that the Push method is called without error.
+// 2. When the underlying ResponseWriter does not implement the http.Pusher interface,
+//    it checks that the Push method returns the http.ErrNotSupported error.
+func TestGzipResponseWriter_Push(t *testing.T) {
+	target := "/test"
+	opts := &http.PushOptions{}
+
+	// Case 1: ResponseWriter implements http.Pusher
+	mock := &mockPusher{} // Implements Pusher
+	w := &gzipResponseWriter{ResponseWriter: mock}
+	err := w.Push(target, opts)
+
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+	if !mock.pushCalled {
+		t.Error("expected Push to be called on the ResponseWriter")
+	}
+
+	// Case 2: ResponseWriter does not implement http.Pusher
+	nonPusher := httptest.NewRecorder() // Does not implement Pusher
+	w = &gzipResponseWriter{ResponseWriter: nonPusher}
+	err = w.Push(target, opts)
+
+	if err != http.ErrNotSupported {
+		t.Errorf("expected error %v, got %v", http.ErrNotSupported, err)
+	}
+}
