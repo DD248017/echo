@@ -16,6 +16,34 @@ import (
 )
 
 func TestBasicAuth(t *testing.T) {
+	handlerCalled := false
+	handler := func(c echo.Context) error {
+		handlerCalled = true
+		return c.String(http.StatusOK, "test")
+	}
+
+	testValidator := func(username, password string, c echo.Context) (bool, error) {
+		if username == "valid-user" && password == "valid-pass" {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	middlewareChain := BasicAuth(testValidator)(handler)
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set(echo.HeaderAuthorization, "Basic "+base64.StdEncoding.EncodeToString([]byte("valid-user:valid-pass")))
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	err := middlewareChain(c)
+
+	assert.NoError(t, err)
+	assert.True(t, handlerCalled)
+}
+
+func TestBasicAuthWithConfig(t *testing.T) {
 	e := echo.New()
 
 	mockValidator := func(u, p string, c echo.Context) (bool, error) {
@@ -33,6 +61,7 @@ func TestBasicAuth(t *testing.T) {
 		skipperResult  bool
 		expectedErr    bool
 		expectedErrMsg string
+		shouldPanic    bool
 	}{
 		{
 			name:         "Valid credentials",
@@ -78,10 +107,21 @@ func TestBasicAuth(t *testing.T) {
 			expectedCode:  http.StatusOK,
 			skipperResult: true,
 		},
+		{
+			name:        "Panic when validator is nil",
+			shouldPanic: true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.shouldPanic {
+				assert.Panics(t, func() {
+					BasicAuthWithConfig(BasicAuthConfig{})
+				})
+				return
+			}
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			res := httptest.NewRecorder()
