@@ -340,6 +340,3 @@ func TestLoggerWithSkipper(t *testing.T) {
 	assert.Empty(t, buf.String())
 }
 
-
-
-
