@@ -344,6 +344,26 @@ func TestGzipResponseWriter_CanNotHijack(t *testing.T) {
 	assert.EqualError(t, err, "feature not supported")
 }
 
+func TestGzipResponseWriter_CanPush(t *testing.T) {
+	trwp := testResponseWriterPusher{testResponseWriterUnwrapper: testResponseWriterUnwrapper{rw: httptest.NewRecorder()}}
+	bdrw := gzipResponseWriter{
+		ResponseWriter: &trwp,
+	}
+
+	err := bdrw.Push("/test", nil)
+	assert.NoError(t, err) // 这里应该不会报错
+}
+
+func TestGzipResponseWriter_CannotPush(t *testing.T) {
+	trw := testResponseWriterUnwrapper{rw: httptest.NewRecorder()}
+	bdrw2 := gzipResponseWriter{
+		ResponseWriter: &trw,
+	}
+
+	err2 := bdrw2.Push("/test", nil)
+	assert.ErrorIs(t, err2, http.ErrNotSupported)
+}
+
 func BenchmarkGzip(b *testing.B) {
 	e := echo.New()
 

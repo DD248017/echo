@@ -139,3 +139,11 @@ type testResponseWriterUnwrapperHijack struct {
 func (w *testResponseWriterUnwrapperHijack) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return nil, nil, errors.New("can hijack")
 }
+
+type testResponseWriterPusher struct {
+	testResponseWriterUnwrapper
+}
+
+func (p *testResponseWriterPusher) Push(target string, opts *http.PushOptions) error {
+	return nil
+}
