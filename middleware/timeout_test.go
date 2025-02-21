@@ -24,6 +24,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestTimeoutWithConfig_InvalidTimeout(t *testing.T) {
+	t.Parallel()
+
+	// 1. create a TimeoutConfig with Timeout set to negative value (should be invalid)
+	config := TimeoutConfig{Timeout: -1 * time.Second}
+
+	// 2. call ToMiddleware and check if it does not return an error
+	mw, err := config.ToMiddleware()
+	assert.NoError(t, err, "ToMiddleware should not return an error even for negative timeout")
+
+	// 3. check if mw is not nil to ensure it does not panic
+	assert.NotNil(t, mw, "ToMiddleware should return a valid middleware function even for invalid timeout")
+
+	// 4. run the middleware to ensure it does not panic
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	h := mw(func(c echo.Context) error {
+		return c.String(http.StatusOK, "test")
+	})
+
+	assert.NotPanics(t, func() {
+		_ = h(c)
+	}, "Middleware should not panic even for negative timeout")
+}
+
 func TestTimeoutSkipper(t *testing.T) {
 	t.Parallel()
 	m := TimeoutWithConfig(TimeoutConfig{
