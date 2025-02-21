@@ -412,3 +412,36 @@ func TestStatic_CustomFS(t *testing.T) {
 		})
 	}
 }
+
+
+// TestStatic_ServeIndexFile tests the Static middleware to ensure it serves the index file correctly.
+// Creates a new Echo instance, applies the Static middleware pointing to the "../_fixture" directory,
+// and makes a GET request to the root URL. The test verifies that the response status code is 200 (OK)
+// and that the response body contains the expected HTML title "<title>Echo</title>".
+func TestStatic_ServeIndexFile(t *testing.T) {
+	e := echo.New()
+	e.Use(Static("../_fixture"))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), "<title>Echo</title>")
+}
+
+// TestStatic_ServeStaticFile tests the Static middleware to ensure it correctly serves a static file.
+// creates a new Echo instance and applies the Static middleware to serve files from the "../_fixture" directory,
+// and sends a GET request to "/images/walle.png". The test verifies that the response status code is 200 (OK)
+// and the Content-Length header is "219885".
+func TestStatic_ServeStaticFile(t *testing.T) {
+	e := echo.New()
+	e.Use(Static("../_fixture"))
+
+	req := httptest.NewRequest(http.MethodGet, "/images/walle.png", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "219885", rec.Header().Get(echo.HeaderContentLength))
+}
