@@ -2926,6 +2926,31 @@ func TestInsertNodeSplitting(t *testing.T) {
     assert.True(t, foundNew, "Expected to find the new route '/te/st' among children")
 }
 
+// Verifies that when routes with more parameters are added,
+// the router’s internal maximum parameter count (echo.maxParam) is updated accordingly
+func TestInsertNodeMaxParamUpdate(t *testing.T) {
+
+    // New Echo instance, which in turn initializes a new Router.
+    e := New()
+    
+    // Reset maxParam to 0 for a clean test.
+    *e.maxParam = 0
+
+    // Get the router from our Echo instance.
+    r := e.router
+
+    // Insert a route with one parameter: "/users/:id"
+    r.insert(http.MethodGet, "/tests1/:test1", handlerFunc)
+
+    // Expect that the internal maxParam is updated to 1.
+    assert.Equal(t, 1, *e.maxParam, "Expected maxParam to be 1 after inserting a route with one parameter")
+
+    // Insert a route with two parameters: "/users/:id/profile/:section"
+    r.insert(http.MethodGet, "/tests1/:test1/tests2/:test2", handlerFunc)
+
+    // maxParam should now reflect the higher parameter count to 2.
+    assert.Equal(t, 2, *e.maxParam, "Expected maxParam to be 2 after inserting a route with two parameters")
+}
 
 func BenchmarkRouterStaticRoutes(b *testing.B) {
 	benchmarkRouterRoutes(b, staticRoutes, staticRoutes)

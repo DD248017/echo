@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type bindTestStruct struct {
@@ -1514,6 +1515,56 @@ func TestBindMultipartFormFiles(t *testing.T) {
 		assertMultipartFileHeader(t, target.Files[0], filesA)
 		assertMultipartFileHeader(t, target.Files[1], filesB)
 	})
+}
+
+func TestBindPathParams_Error(t *testing.T) {
+	e := New()
+	req := new(http.Request)
+	rec := new(http.ResponseWriter)
+	ctx := e.NewContext(req, *rec)
+
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("invalid_number")
+
+	type TestStruct struct {
+		ID int `param:"id"`
+	}
+
+	var testData TestStruct
+	binder := &DefaultBinder{}
+
+	err := binder.BindPathParams(ctx, &testData)
+
+	require.Error(t, err)
+	httpErr, ok := err.(*HTTPError)
+	require.True(t, ok, "expected HTTP error")
+	require.Equal(t, http.StatusBadRequest, httpErr.Code)
+	require.Equal(t, "strconv.ParseInt: parsing \"invalid_number\": invalid syntax", httpErr.Message)
+}
+
+func TestBind_Error(t *testing.T) {
+	e := New()
+	req := new(http.Request)
+	rec := new(http.ResponseWriter)
+	ctx := e.NewContext(req, *rec)
+
+	ctx.SetParamNames("id")
+	ctx.SetParamValues("invalid_number")
+
+	type TestStruct struct {
+		ID int `param:"id"`
+	}
+
+	var testData TestStruct
+	binder := &DefaultBinder{}
+
+	err := binder.Bind(&testData, ctx)
+
+	require.Error(t, err)
+	httpErr, ok := err.(*HTTPError)
+	require.True(t, ok, "expected HTTP error")
+	require.Equal(t, http.StatusBadRequest, httpErr.Code)
+	require.Contains(t, httpErr.Message.(string), "strconv.ParseInt: parsing \"invalid_number\": invalid syntax")
 }
 
 type testFormFile struct {
