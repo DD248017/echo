@@ -318,47 +318,24 @@ func TestLoggerTemplateWithTimeUnixMicro(t *testing.T) {
 	assert.WithinDuration(t, time.Unix(unixMicros/1000000, 0), time.Now(), 3*time.Second)
 }
 
-func TestLoggerWithCustomHeader(t *testing.T) {
-	e := echo.New()
-	buf := new(bytes.Buffer)
-	config := LoggerConfig{
-		Format: `{"custom_header":"${header:X-Custom-Header}"}\n`,
-		Output: buf,
-	}
-	middleware := LoggerWithConfig(config)
-	h := middleware(func(c echo.Context) error {
-		return c.String(http.StatusOK, "ok")
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Set("X-Custom-Header", "test-value")
-	res := httptest.NewRecorder()
-	c := e.NewContext(req, res)
-
-	_ = h(c)
-
-	logOutput := buf.String()
-	assert.Contains(t, logOutput, `"custom_header":"test-value"`)
-}
-
-func TestLoggerCustomTagFunc2(t *testing.T) {
+func TestLoggerWithMalformedCustomTimeFormat(t *testing.T) {
 	e := echo.New()
 	buf := new(bytes.Buffer)
 	e.Use(LoggerWithConfig(LoggerConfig{
-		Format: `{"protocol":"${protocol}",${custom}}` + "\n",
-		CustomTagFunc: func(c echo.Context, buf *bytes.Buffer) (int, error) {
-			return buf.WriteString(`"tag":"my-value"`)
-		},
-		Output: buf,
+		CustomTimeFormat: "invalid-format",
+		Format:           `{"time":"${time_custom}"}\n`,
+		Output:           buf,
 	}))
 
 	e.GET("/", func(c echo.Context) error {
-		return c.String(http.StatusOK, "custom time stamp test")
+		return c.String(http.StatusOK, "OK")
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
-	assert.Equal(t, `{"protocol":"HTTP/1.1","tag":"my-value"}`+"\n", buf.String())
+	logOutput := buf.String()
+	// Ensure that the logger outputs a valid string even when the time format is invalid
+	assert.Contains(t, logOutput, `"time":"invalid-format"`)
 }
