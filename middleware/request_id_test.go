@@ -42,6 +42,22 @@ func TestRequestID(t *testing.T) {
 	assert.True(t, calledHandler)
 }
 
+func TestRequestID_DefaultConfig(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	handler := func(c echo.Context) error {
+		return c.String(http.StatusOK, "test")
+	}
+
+	rid := RequestID()
+	h := rid(handler)
+	h(c)
+
+	assert.Len(t, rec.Header().Get(echo.HeaderXRequestID), 32)
+}
+
 func TestRequestID_IDNotAltered(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
