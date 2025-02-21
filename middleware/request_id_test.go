@@ -43,6 +43,7 @@ func TestRequestID(t *testing.T) {
 }
 
 func TestRequestID_DefaultConfig(t *testing.T) {
+	// Default config
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
@@ -51,6 +52,7 @@ func TestRequestID_DefaultConfig(t *testing.T) {
 		return c.String(http.StatusOK, "test")
 	}
 
+	// set RequestID middleware
 	rid := RequestID()
 	h := rid(handler)
 	h(c)

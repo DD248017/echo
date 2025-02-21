@@ -345,16 +345,18 @@ func TestGzipResponseWriter_CanNotHijack(t *testing.T) {
 }
 
 func TestGzipResponseWriter_CanPush(t *testing.T) {
+	// test case for supporting Push
 	trwp := testResponseWriterPusher{testResponseWriterUnwrapper: testResponseWriterUnwrapper{rw: httptest.NewRecorder()}}
 	bdrw := gzipResponseWriter{
 		ResponseWriter: &trwp,
 	}
 
 	err := bdrw.Push("/test", nil)
-	assert.NoError(t, err) // 这里应该不会报错
+	assert.NoError(t, err)
 }
 
 func TestGzipResponseWriter_CannotPush(t *testing.T) {
+	// test case for not supporting Push
 	trw := testResponseWriterUnwrapper{rw: httptest.NewRecorder()}
 	bdrw2 := gzipResponseWriter{
 		ResponseWriter: &trw,

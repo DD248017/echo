@@ -57,7 +57,7 @@ func TestMethodOverride_SkipperAndEmptyMethod(t *testing.T) {
 		return c.String(http.StatusOK, "test")
 	}
 
-	// 1. 测试 Skipper：如果 Skipper 返回 true，应该跳过方法覆盖
+	// 1. test Skipper: if Skipper returns true, should skip method override
 	m := MethodOverrideWithConfig(MethodOverrideConfig{
 		Skipper: func(c echo.Context) bool { return true },
 	})
@@ -66,9 +66,10 @@ func TestMethodOverride_SkipperAndEmptyMethod(t *testing.T) {
 	req.Header.Set(echo.HeaderXHTTPMethodOverride, http.MethodDelete)
 	c := e.NewContext(req, rec)
 	m(h)(c)
-	assert.Equal(t, http.MethodPost, req.Method) // 确保 Skipper 生效，Method 没有被覆盖
+	// ensure the method is not overridden
+	assert.Equal(t, http.MethodPost, req.Method)
 
-	// 2. 测试 Getter 返回空字符串（即 `m == ""` 的情况）
+	// 2. test empty method: if Getter returns empty string, should skip method override
 	m = MethodOverrideWithConfig(MethodOverrideConfig{
 		Getter: func(c echo.Context) string { return "" },
 	})
@@ -77,5 +78,6 @@ func TestMethodOverride_SkipperAndEmptyMethod(t *testing.T) {
 	req.Header.Set(echo.HeaderXHTTPMethodOverride, http.MethodDelete)
 	c = e.NewContext(req, rec)
 	m(h)(c)
-	assert.Equal(t, http.MethodPost, req.Method) // 方法不应该被覆盖
+	// ensure the method is not overridden
+	assert.Equal(t, http.MethodPost, req.Method)
 }
